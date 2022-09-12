@@ -49,8 +49,8 @@ manager.on("newOffer", (offer) => {
   console.log(
     `New offer #${offer.id} from ${offer.partner.getSteam3RenderedID()}`
   );
-  const CAN_ACCEPT = false;
-  if (CAN_ACCEPT) {
+  const can_accept = offer.itemsToGive.length == 0;
+  if (can_accept) {
     offer.accept((err, status) => {
       if (err) {
         console.log(err);
