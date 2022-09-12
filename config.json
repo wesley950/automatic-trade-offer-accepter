@@ -1,6 +1,5 @@
 {
-    "domain_name": "",
     "username": "",
     "password": "",
-    "shared_secret": ""
+    "steam_totp": ""
 }

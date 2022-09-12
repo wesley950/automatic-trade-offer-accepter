@@ -1,4 +1,3 @@
-const SteamUser = require("steam-user");
 const SteamCommunity = require("steamcommunity");
 const SteamTotp = require("steam-totp");
 const TradeOfferManager = require("steam-tradeoffer-manager");
@@ -6,19 +5,21 @@ const FS = require("fs");
 
 const config = require("./config.json");
 
-let client = new SteamUser();
-let manager = new TradeOfferManager({
-  steam: client,
-  domain: config.domain_name,
-  language: "en",
-});
 let community = new SteamCommunity();
+let manager = new TradeOfferManager({
+  language: "en",
+  pollInterval: 60000,
+});
 
 let logOnOptions = {
   accountName: config.username,
   password: config.password,
-  twoFactorCode: SteamTotp.getAuthCode(config.shared_secret),
+  twoFactorCode: SteamTotp.getAuthCode(config.steam_totp),
 };
+
+if (FS.existsSync("steamguard.txt")) {
+  logOnOptions.steamguard = FS.readFileSync("steamguard.txt").toString("utr8");
+}
 
 if (FS.existsSync("polldata.json")) {
   manager.pollData = JSON.parse(
@@ -26,13 +27,15 @@ if (FS.existsSync("polldata.json")) {
   );
 }
 
-client.logOn(logOnOptions);
+community.login(logOnOptions, (err, sessionID, cookiess, steamguard) => {
+  if (err) {
+    console.log(`Steam login fail: ${err.message}`);
+    process.exit(1);
+  }
 
-client.on("loggedOn", () => {
+  FS.writeFileSync("steamguard.txt", steamguard);
   console.log("Logged into Steam");
-});
 
-client.on("webSession", (sessionID, cookies) => {
   manager.setCookies(cookies, (err) => {
     if (err) {
       console.log(err);
@@ -41,8 +44,6 @@ client.on("webSession", (sessionID, cookies) => {
 
     console.log("Got API key: " + manager.apiKey);
   });
-
-  community.setCookies(cookies);
 });
 
 manager.on("newOffer", (offer) => {
