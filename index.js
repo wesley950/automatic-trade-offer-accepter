@@ -1,3 +1,4 @@
+const SteamUser = require("steam-user");
 const SteamCommunity = require("steamcommunity");
 const SteamTotp = require("steam-totp");
 const TradeOfferManager = require("steam-tradeoffer-manager");
@@ -5,21 +6,19 @@ const FS = require("fs");
 
 const config = require("./config.json");
 
-let community = new SteamCommunity();
+let client = new SteamUser();
 let manager = new TradeOfferManager({
+  steam: client,
+  domain: config.domainName,
   language: "en",
-  pollInterval: 60000,
 });
+let community = new SteamCommunity();
 
 let logOnOptions = {
   accountName: config.username,
   password: config.password,
-  twoFactorCode: SteamTotp.getAuthCode("I FUCKING HATE THIS"),
+  twoFactorCode: SteamTotp.getAuthCode(config.apiKey),
 };
-
-if (FS.existsSync("steamguard.txt")) {
-  logOnOptions.steamguard = FS.readFileSync("steamguard.txt").toString("utr8");
-}
 
 if (FS.existsSync("polldata.json")) {
   manager.pollData = JSON.parse(
@@ -27,15 +26,13 @@ if (FS.existsSync("polldata.json")) {
   );
 }
 
-community.login(logOnOptions, (err, sessionID, cookiess, steamguard) => {
-  if (err) {
-    console.log(`Steam login fail: ${err.message}`);
-    process.exit(1);
-  }
+client.logOn(logOnOptions);
 
-  FS.writeFileSync("steamguard.txt", steamguard);
+client.on("loggedOn", () => {
   console.log("Logged into Steam");
+});
 
+client.on("webSession", (sessionID, cookies) => {
   manager.setCookies(cookies, (err) => {
     if (err) {
       console.log(err);
@@ -44,33 +41,37 @@ community.login(logOnOptions, (err, sessionID, cookiess, steamguard) => {
 
     console.log("Got API key: " + manager.apiKey);
   });
+
+  community.setCookies(cookies);
 });
 
 manager.on("newOffer", (offer) => {
   console.log(
     `New offer #${offer.id} from ${offer.partner.getSteam3RenderedID()}`
   );
-  const can_accept = offer.itemsToGive.length == 0;
-  if (can_accept) {
-    offer.accept((err, status) => {
-      if (err) {
-        console.log(err);
-      } else {
-        console.log("Offer accepted: " + status);
-        if (status == "pending") {
-          community.acceptConfirmationForObject(
-            "identitySecret",
-            offer.id,
-            (err) => {
-              if (err) {
-                console.log("Can't confirm trade offer: " + err.message);
-              } else {
-                console.log("Trade offer " + offer.id + " confirmed");
+  let will_accept = offer.itemsToGive.length == 0;
+  if (will_accept) {
+    setTimeout(() => {
+      offer.accept((err, status) => {
+        if (err) {
+          console.log(err);
+        } else {
+          console.log("Offer accepted: " + status);
+          if (status == "pending") {
+            community.acceptConfirmationForObject(
+              "identitySecret",
+              offer.id,
+              (err) => {
+                if (err) {
+                  console.log("Can't confirm trade offer: " + err.message);
+                } else {
+                  console.log("Trade offer " + offer.id + " confirmed");
+                }
               }
-            }
-          );
+            );
+          }
         }
-      }
+      }, 60000);
     });
   }
 });
