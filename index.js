@@ -14,7 +14,7 @@ let manager = new TradeOfferManager({
 let logOnOptions = {
   accountName: config.username,
   password: config.password,
-  twoFactorCode: SteamTotp.getAuthCode(config.steam_totp),
+  // twoFactorCode: SteamTotp.getAuthCode(config.steam_totp),
 };
 
 if (FS.existsSync("steamguard.txt")) {
