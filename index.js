@@ -45,6 +45,10 @@ client.on("webSession", (sessionID, cookies) => {
   community.setCookies(cookies);
 });
 
+community.on("sessionExpired", (err) => {
+  client.webLogOn()
+});
+
 manager.on("newOffer", (offer) => {
   console.log(
     `New offer #${offer.id} from ${offer.partner.getSteam3RenderedID()}`
