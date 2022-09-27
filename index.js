@@ -30,6 +30,11 @@ client.logOn(logOnOptions);
 
 client.on("loggedOn", () => {
   console.log("Logged into Steam");
+
+setInterval(() => {
+  console.log("WARNING: Updating session.")
+  client.webLogOn();
+}, 60*60*1000);
 });
 
 client.on("webSession", (sessionID, cookies) => {
@@ -57,8 +62,6 @@ community.on("sessionExpired", (err) => {
     client.logOn(logOnOptions);
     console.log("Re-logging on using client.logOn().");
   }
-
-  client.webLogOn();
 });
 
 manager.on("newOffer", (offer) => {
