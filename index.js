@@ -46,7 +46,19 @@ client.on("webSession", (sessionID, cookies) => {
 });
 
 community.on("sessionExpired", (err) => {
-  client.webLogOn()
+  if (err) {
+    console.log(`WARNING: Session expired: ${err}`)
+  }
+
+  if (client.steamID) {
+    client.webLogOn();
+    console.log("Re-logging on using client.webLogOn().");
+  } else {
+    client.logOn(logOnOptions);
+    console.log("Re-logging on using client.logOn().");
+  }
+
+  client.webLogOn();
 });
 
 manager.on("newOffer", (offer) => {
