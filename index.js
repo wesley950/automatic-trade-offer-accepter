@@ -6,6 +6,8 @@ const FS = require("fs");
 
 const config = require("./config.json");
 
+let atomicCounter = 0;
+
 let client = new SteamUser();
 let manager = new TradeOfferManager({
   steam: client,
@@ -31,10 +33,15 @@ client.logOn(logOnOptions);
 client.on("loggedOn", () => {
   console.log("Logged into Steam");
 
-setInterval(() => {
-  console.log("WARNING: Updating session.")
-  client.webLogOn();
-}, 60*60*1000);
+  setInterval(() => {
+    if (atomicCounter > 0) {
+      console.log('Cannot update cookies because there are trades waiting to be accepted.')
+      return
+    } else {
+      console.log("WARNING: Updating session.");
+      client.webLogOn();
+    }
+  }, 60 * 60 * 1000);
 });
 
 client.on("webSession", (sessionID, cookies) => {
@@ -52,7 +59,7 @@ client.on("webSession", (sessionID, cookies) => {
 
 community.on("sessionExpired", (err) => {
   if (err) {
-    console.log(`WARNING: Session expired: ${err}`)
+    console.log(`WARNING: Session expired: ${err}`);
   }
 
   if (client.steamID) {
@@ -91,7 +98,9 @@ manager.on("newOffer", (offer) => {
           }
         }
       });
+      atomicCounter -= 1
     }, 60000);
+    atomicCounter += 1
   }
 });
 
